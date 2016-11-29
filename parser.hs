@@ -5,8 +5,6 @@ import Data.Functor
 import Control.Applicative
 import Control.Monad
 
-
-
 newtype Parser a = Parser {parse :: String -> [(a, String)]}
 
 item :: Parser Char
@@ -34,3 +32,51 @@ instance Applicative Parser where
 instance Monad Parser where
     p >>= f = bind p f
     return a = pure a
+
+failure :: Parser a
+failure = Parser (\cs -> [])
+
+combine :: Parser a -> Parser a -> Parser a
+combine p q = Parser (\s -> parse p s ++ parse q s)
+
+-- class Monad m => MonadPlus m where
+--   mzero :: m a
+--   mplus :: m a -> m a -> m a
+
+instance MonadPlus Parser where
+    mzero = failure
+    mplus = combine
+
+option :: Parser a -> Parser a -> Parser a
+option p q = Parser $ \s ->
+    case parse p s of 
+        [] -> parse q s 
+        res -> res 
+
+
+-- class Applicative f => Alternative f where
+--   empty :: f a
+--   (<|>) :: f a -> f a -> f a
+
+-- | One or more.
+-- some :: f a -> f [a]
+-- some v = some_v
+--   where
+--     many_v = some_v <|> pure []
+--     some_v = (:) <$> v <*> many_v
+
+-- | Zero or more.
+-- many :: f a -> f [a]
+-- many v = many_v
+--   where
+--     many_v = some_v <|> pure []
+--     some_v = (:) <$> v <*> many_v
+
+-- instances of Alternative should satisfy the monoid laws
+-- empty <|> x = x
+-- x <|> empty = x
+-- (x <|> y) <|> z = x <|> (y <|> z)
+
+instance Alternative Parser where
+    empty = mzero
+    (<|>) = option
