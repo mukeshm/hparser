@@ -80,3 +80,40 @@ option p q = Parser $ \s ->
 instance Alternative Parser where
     empty = mzero
     (<|>) = option
+
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy pred = item `bind` \c ->
+    if pred c 
+        then unit c
+    else (Parser (\cs -> []))
+
+oneOf :: [Char] -> Parser Char
+oneOf s = satisfy (flip elem s)
+
+char :: Char -> Parser Char
+char c = satisfy (c ==)
+
+string :: String -> Parser String
+string [] = return []
+string (c:cs) = char c >> string cs >> return (c:cs)
+
+natural :: Parser Integer
+natural = read <$> some (satisfy isDigit)
+
+spaces :: Parser String
+spaces = many $ oneOf " \n\r"
+
+digit :: Parser Char
+digit = satisfy isDigit
+
+token :: Parser a -> Parser a
+token p = do { a <- p; spaces; return a}
+
+reserved :: String -> Parser String
+reserved s = token (string s)
+
+number :: Parser Int
+number = do
+    s <- string "-" <|> return []
+    cs <- some digit
+    return $ read (s ++ cs)
